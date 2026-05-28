@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -13,14 +14,14 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Auth Service")
 
-SECRET_KEY = "mini_shop_secret"
+SECRET_KEY = os.getenv("SECRET_KEY", "mini_shop_secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
-def get_db():
+async def get_db():
     db = SessionLocal()
     try:
         yield db
@@ -36,7 +37,7 @@ def create_token(data: dict, expires_delta: timedelta | None = None):
 
 
 @app.post("/register")
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if crud.get_user(db, user.username):
         raise HTTPException(status_code=400, detail="User exists")
     hashed = pwd_context.hash(user.password)
@@ -44,7 +45,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/token")
-def login(
+async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
@@ -60,9 +61,6 @@ def login(
 
 
 @app.get("/verify-token")
-def verify(payload: dict = Depends(verify_token)):
-    """
-    Called by other microservices to validate a Bearer token.
-    Returns the username embedded in the token.
-    """
+async def verify(payload: dict = Depends(verify_token)):
     return {"valid": True, "username": payload.get("sub")}
+

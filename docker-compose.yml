@@ -1,34 +1,28 @@
-version: "3.9"
-
 services:
   auth_service:
     build:
       context: .
       dockerfile: auth_service/Dockerfile
-    container_name: auth_service
+    environment:
+      - SECRET_KEY=replace_this_with_a_strong_secret
     ports:
       - "8001:8001"
-    volumes:
-      - ./auth_service:/app        # hot-reload during dev
-      - ./shared:/app/shared
-    networks:
-      - micro_shop_net
 
   product_service:
     build:
       context: .
       dockerfile: product_service/Dockerfile
-    container_name: product_service
+    environment:
+      - SECRET_KEY=replace_this_with_a_strong_secret
     ports:
       - "8002:8002"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
     volumes:
-      - ./product_service:/app     # hot-reload during dev
-      - ./shared:/app/shared
-    networks:
-      - micro_shop_net
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - auth_service
-
-networks:
-  micro_shop_net:
-    driver: bridge
+      - product_service
